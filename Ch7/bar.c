@@ -1,0 +1,1 @@
+int uninitialized_var;

@@ -167,7 +167,11 @@ void eval(char *cmdline)
 {
     char *argv[MAXARGS];
     int bg;
+    sigset_t mask_all, mask_one, prev_one;
 
+    sigfillset(&mask_all);
+    sigemptyset(&mask_one);
+    sigaddset(&mask_one, SIGCHLD);
     bg = parseline(cmdline, argv);
 
     if (argv[0] == NULL)
@@ -177,6 +181,7 @@ void eval(char *cmdline)
         return ;
     }
 
+    sigprocmask(SIG_BLOCK, &mask_one, &prev_one);
     pid_t pid = fork();
     
     if (pid < 0) {
@@ -184,14 +189,21 @@ void eval(char *cmdline)
     }
 
     if (pid == 0) {
+        sigprocmask(SIG_SETMASK, &prev_one, NULL);
         execve(argv[0], argv, environ);
         perror("execve");
         _exit(127);
     } else {
         if (bg == 0) {
+            sigprocmask(SIG_BLOCK, &mask_all, NULL);
+            addjob(jobs, pid, FG, cmdline);
+            sigprocmask(SIG_SETMASK, &prev_one, NULL);
             waitfg(pid);
         } else {
+            sigprocmask(SIG_BLOCK, &mask_all, NULL);
             addjob(jobs, pid, BG, cmdline);
+            sigprocmask(SIG_SETMASK, &prev_one, NULL);
+            printf("[%d] (%d) %s", pid2jid(pid), pid, cmdline);
         }
     }
     

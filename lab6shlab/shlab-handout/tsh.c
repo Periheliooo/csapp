@@ -173,7 +173,7 @@ void eval(char *cmdline)
     if (argv[0] == NULL)
         return ;
     
-    if (builtin_cmd(argv[0])) {
+    if (builtin_cmd(argv)) {
         return ;
     }
 
@@ -188,15 +188,15 @@ void eval(char *cmdline)
         perror("execve");
         _exit(127);
     } else {
-        waitpid(pid, )
+        if (bg == 0) {
+            waitfg(pid);
+        } else {
+            addjob(jobs, pid, BG, cmdline);
+        }
     }
     
 
-    if (bg == 0) {
-
-    } else {
-
-    }
+    
     return;
 }
 
@@ -266,11 +266,9 @@ int builtin_cmd(char **argv)
     if (strcmp(argv[0], "quit") == 0) {
         exit(0);
     } else if (strcmp(argv[0], "bg") == 0 || strcmp(argv[0], "fg") == 0) {
-        do_bgfg();
+        do_bgfg(argv);
     } else if (strcmp(argv[0], "jobs") == 0) {
         listjobs(jobs);
-    } else {
-
     }
     return 0;     /* not a builtin command */
 }
@@ -288,6 +286,12 @@ void do_bgfg(char **argv)
  */
 void waitfg(pid_t pid)
 {
+    sigset_t empty;
+    sigemptyset(&empty);
+
+    while (fgpid(jobs) == pid) {
+        sigsuspend(&empty);
+    }
     return;
 }
 
@@ -304,6 +308,14 @@ void waitfg(pid_t pid)
  */
 void sigchld_handler(int sig) 
 {
+    int saved_errno = errno;
+    pid_t pid;
+
+    while ((pid = waitpid(-1, NULL, WNOHANG)) > 0) {
+
+    }
+
+    errno = saved_errno;
     return;
 }
 

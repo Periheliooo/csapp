@@ -321,10 +321,20 @@ void waitfg(pid_t pid)
 void sigchld_handler(int sig) 
 {
     int saved_errno = errno;
+    int status;
     pid_t pid;
 
-    while ((pid = waitpid(-1, NULL, WNOHANG)) > 0) {
-
+    while ((pid = waitpid(-1, &status, WNOHANG | WUNTRACED)) > 0) {
+        if (WIFEXITED(status)) {
+            deletejob(jobs, pid);
+        } else if (WIFSIGNALED(status)) {
+            printf("Job [%d] (%d) terminated by signal %d", pid2jid(pid), pid, WTERMSIG(status));
+            deletejob(jobs, pid);
+        } else if (WIFSTOPPED(status)) {
+            struct job_t *job = getjobpid(jobs, pid);
+            job->state = ST;
+            printf("Job [%d] (%d) stopped by signal %d", pid2jid(pid), pid, WSTOPSIG(status));
+        }
     }
 
     errno = saved_errno;

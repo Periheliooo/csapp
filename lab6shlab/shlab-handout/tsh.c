@@ -186,10 +186,12 @@ void eval(char *cmdline)
     
     if (pid < 0) {
         perror("fork");
+        exit(1);
     }
 
     if (pid == 0) {
         sigprocmask(SIG_SETMASK, &prev_one, NULL);
+        setpgid(0, 0);
         execve(argv[0], argv, environ);
         perror("execve");
         _exit(127);
@@ -279,8 +281,10 @@ int builtin_cmd(char **argv)
         exit(0);
     } else if (strcmp(argv[0], "bg") == 0 || strcmp(argv[0], "fg") == 0) {
         do_bgfg(argv);
+        return 1;
     } else if (strcmp(argv[0], "jobs") == 0) {
         listjobs(jobs);
+        return 1;
     }
     return 0;     /* not a builtin command */
 }
@@ -302,7 +306,7 @@ void waitfg(pid_t pid)
     sigemptyset(&empty);
 
     while (fgpid(jobs) == pid) {
-        sigsuspend(&empty);
+        sleep(1);
     }
     return;
 }
@@ -328,12 +332,12 @@ void sigchld_handler(int sig)
         if (WIFEXITED(status)) {
             deletejob(jobs, pid);
         } else if (WIFSIGNALED(status)) {
-            printf("Job [%d] (%d) terminated by signal %d", pid2jid(pid), pid, WTERMSIG(status));
+            printf("Job [%d] (%d) terminated by signal %d\n", pid2jid(pid), pid, WTERMSIG(status));
             deletejob(jobs, pid);
         } else if (WIFSTOPPED(status)) {
             struct job_t *job = getjobpid(jobs, pid);
             job->state = ST;
-            printf("Job [%d] (%d) stopped by signal %d", pid2jid(pid), pid, WSTOPSIG(status));
+            printf("Job [%d] (%d) stopped by signal %d\n", pid2jid(pid), pid, WSTOPSIG(status));
         }
     }
 

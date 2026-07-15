@@ -367,6 +367,11 @@ void sigint_handler(int sig)
  */
 void sigtstp_handler(int sig) 
 {
+    pid_t pid = fgpid(jobs);
+
+    if (pid != 0) {
+        kill(-pid, SIGTSTP);
+    }
     return;
 }
 

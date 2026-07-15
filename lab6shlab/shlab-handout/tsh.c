@@ -352,11 +352,20 @@ void sigchld_handler(int sig)
  */
 void sigint_handler(int sig) 
 {
-    pid_t pid = fgpid(jobs);
+    int saved_errno = errno;
+    sigset_t mask_all, prev_all;
+    pid_t pid;
 
+    sigfillset(&mask_all);
+    sigprocmask(SIG_BLOCK, &mask_all, &prev_all);
+
+    pid = fgpid(jobs);
     if (pid != 0) {
         kill(-pid, SIGINT);
     }
+
+    sigprocmask(SIG_SETMASK, &prev_all, NULL);
+    errno = saved_errno;
     return;
 }
 
@@ -367,11 +376,20 @@ void sigint_handler(int sig)
  */
 void sigtstp_handler(int sig) 
 {
-    pid_t pid = fgpid(jobs);
+    int saved_errno = errno;
+    sigset_t mask_all, prev_all;
+    pid_t pid;
 
+    sigfillset(&mask_all);
+    sigprocmask(SIG_BLOCK, &mask_all, &prev_all);
+
+    pid = fgpid(jobs);
     if (pid != 0) {
         kill(-pid, SIGTSTP);
     }
+
+    sigprocmask(SIG_SETMASK, &prev_all, NULL);
+    errno = saved_errno;
     return;
 }
 

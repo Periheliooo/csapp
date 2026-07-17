@@ -305,7 +305,7 @@ void do_bgfg(char **argv)
 
     if (argv[1][0] == '%') {
         if (sscanf(&argv[1][1], "%d", &jid) > 0) {
-            job = getjobjid(jobs, id);
+            job = getjobjid(jobs, jid);
             if (job == NULL) {
                 printf("%%%d: No such job", jid);
                 return;
@@ -317,7 +317,7 @@ void do_bgfg(char **argv)
         pid = atoi(argv[1]);
         job = getjobpid(jobs, pid);
         if (job == NULL) {
-            printf("(%d): No such process\n", id);
+            printf("(%d): No such process\n", jid);
             return;
         }
     }

@@ -236,12 +236,41 @@ void *mm_realloc(void *ptr, size_t size)
     void *newptr;
     size_t copySize;
     
+    if (oldptr == NULL)
+        return mm_malloc(size);
+    if (size == 0) {
+        mm_free(oldptr);
+        return NULL;
+    }
+
+    copySize = GET_SIZE(HDRP(oldptr)) - DSIZE;
+    size_t asize;
+    if (size <= DSIZE)
+        asize = 2*DSIZE;
+    else
+        asize = DSIZE * ((size + (DSIZE) + (DSIZE-1)) / DSIZE);
+
+    if (size < copySize) {
+        place(oldptr, asize);
+        return oldptr;
+    }
+
+    size_t next_alloc = GET_ALLOC(HDRP(NEXT_BLKP(ptr)));
+    size_t csize = GET_SIZE(HDRP(oldptr));
+    if (!next_alloc) {
+        csize += GET_SIZE(HDRP(NEXT_BLKP(ptr)));
+        if (csize >= asize) {
+            PUT(FTRP(NEXT_BLKP(ptr)), PACK(csize, 1));
+            PUT(HDRP(ptr), PACK(csize, 1));
+            place(ptr, asize);
+            return oldptr;
+        }
+    }
+
     newptr = mm_malloc(size);
     if (newptr == NULL)
-      return NULL;
-    copySize = *(size_t *)((char *)oldptr - SIZE_T_SIZE);
-    if (size < copySize)
-      copySize = size;
+        return NULL;
+            
     memcpy(newptr, oldptr, copySize);
     mm_free(oldptr);
     return newptr;

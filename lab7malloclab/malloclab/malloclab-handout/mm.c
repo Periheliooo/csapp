@@ -245,23 +245,23 @@ void *mm_realloc(void *ptr, size_t size)
 
     copySize = GET_SIZE(HDRP(oldptr)) - DSIZE;
     size_t asize;
+    size_t csize = GET_SIZE(HDRP(oldptr));
     if (size <= DSIZE)
         asize = 2*DSIZE;
     else
         asize = DSIZE * ((size + (DSIZE) + (DSIZE-1)) / DSIZE);
 
-    if (size < copySize) {
+    if (asize <= csize) {
         place(oldptr, asize);
         return oldptr;
     }
 
     size_t next_alloc = GET_ALLOC(HDRP(NEXT_BLKP(ptr)));
-    size_t csize = GET_SIZE(HDRP(oldptr));
     if (!next_alloc) {
         csize += GET_SIZE(HDRP(NEXT_BLKP(ptr)));
         if (csize >= asize) {
-            PUT(FTRP(NEXT_BLKP(ptr)), PACK(csize, 1));
-            PUT(HDRP(ptr), PACK(csize, 1));
+            PUT(FTRP(NEXT_BLKP(ptr)), PACK(csize, 0));
+            PUT(HDRP(ptr), PACK(csize, 0));
             place(ptr, asize);
             return oldptr;
         }
@@ -275,17 +275,3 @@ void *mm_realloc(void *ptr, size_t size)
     mm_free(oldptr);
     return newptr;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-

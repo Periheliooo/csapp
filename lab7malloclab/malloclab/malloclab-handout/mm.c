@@ -75,7 +75,11 @@ team_t team = {
 static void *extend_heap(size_t words);
 static void *coalesce(void *bp);
 static void *find_fit(size_t asize);
+static void *best_fit(size_t asize);
 static void place(void *bp, size_t asize);
+static void printblock(void *bp);
+void mm_checkheap(int verbose);
+static void debug_check(const char *where);
 
 /* variables */
 static char *heap_listp;
@@ -98,6 +102,8 @@ int mm_init(void)
     /* Extend the empty heap with a free block of CHUNKSIZE bytes */
     if (extend_heap(CHUNKSIZE / WSIZE) == NULL)
         return -1;
+
+    // debug_check("after init");
 
     return 0;
 }
@@ -142,6 +148,7 @@ void *mm_malloc(size_t size)
 
     if ((bp = find_fit(asize)) != NULL) {
         place(bp, asize);
+        // debug_check("after malloc");
         return bp;
     }
 
@@ -149,6 +156,7 @@ void *mm_malloc(size_t size)
     if ((bp = extend_heap(extendsize/WSIZE)) == NULL)
         return NULL;
     place(bp, asize);
+    // debug_check("after extend and malloc");
     return bp;
 }
 
@@ -164,6 +172,24 @@ static void *find_fit(size_t asize)
     }
     
     return NULL;
+}
+
+static void *best_fit(size_t asize)
+{
+    void *bp;
+    void *best_bp = NULL;
+    size_t min_size = 0;
+
+    for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)) {
+        if (!GET_ALLOC(HDRP(bp)) && GET_SIZE(HDRP(bp)) >= asize) {
+            if (min_size == 0 || GET_SIZE(HDRP(bp)) < min_size) {
+                min_size = GET_SIZE(HDRP(bp));
+                best_bp = bp;
+            }
+        }
+    }
+
+    return best_bp;
 }
 
 static void place(void *bp, size_t asize)
@@ -193,6 +219,7 @@ void mm_free(void *ptr)
     PUT(HDRP(ptr), PACK(size, 0));
     PUT(FTRP(ptr), PACK(size, 0));
     coalesce(ptr);
+    // debug_check("after free");
 }
 
 static void *coalesce(void *bp)
@@ -300,4 +327,52 @@ void *mm_realloc(void *ptr, size_t size)
     memcpy(newptr, oldptr, copySize);
     mm_free(oldptr);
     return newptr;
+}
+
+static void printblock(void *bp) 
+{
+    size_t hsize = GET_SIZE(HDRP(bp));
+    size_t halloc = GET_ALLOC(HDRP(bp));
+    size_t fsize = GET_SIZE(FTRP(bp));
+    size_t falloc = GET_ALLOC(FTRP(bp));
+
+    printf("%p: header: [%zu:%c] footer: [%zu:%c]\n",
+           bp,
+           hsize, halloc ? 'a' : 'f',
+           fsize, falloc ? 'a' : 'f');
+}
+
+void mm_checkheap(int verbose) 
+{
+    void *bp;
+
+    if (verbose)
+        printf("Heap (%p):\n", heap_listp);
+
+    for (bp = heap_listp;
+         GET_SIZE(HDRP(bp)) > 0;
+         bp = NEXT_BLKP(bp)) {
+
+        if (verbose)
+            printblock(bp);
+    }
+
+    if (verbose) {
+        printf("%p: epilogue header: [%zu:%c]\n",
+               bp,
+               GET_SIZE(HDRP(bp)),
+               GET_ALLOC(HDRP(bp)) ? 'a' : 'f');
+    }
+}
+
+static int check_count = 0;
+
+static void debug_check(const char *where)
+{
+    check_count++;
+
+    printf("\n========== check %d: %s ==========\n",
+           check_count, where);
+
+    mm_checkheap(1);
 }

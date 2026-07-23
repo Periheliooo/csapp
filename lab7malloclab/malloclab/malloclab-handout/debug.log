@@ -1,0 +1,9 @@
+ERROR: ld.so: object '/usr/libexec/coreutils/libstdbuf.so' from LD_PRELOAD cannot be preloaded (wrong ELF class: ELFCLASS64): ignored.
+Team Name:ateam
+Member 1 :Harry Bovik:bovik@cs.cmu.edu
+Using default tracefiles in /afs/cs/project/ics2/im/labs/malloclab/traces/
+Measuring performance with gettimeofday().
+
+Testing mm malloc
+Reading tracefile: amptjp-bal.rep
+Could not open /afs/cs/project/ics2/im/labs/malloclab/traces/amptjp-bal.rep in read_trace: No such file or directory

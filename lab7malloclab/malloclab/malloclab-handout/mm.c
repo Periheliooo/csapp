@@ -252,13 +252,39 @@ void *mm_realloc(void *ptr, size_t size)
         asize = DSIZE * ((size + (DSIZE) + (DSIZE-1)) / DSIZE);
 
     if (asize <= csize) {
-        place(oldptr, asize);
+        size_t remainder = csize - asize;
+        if (remainder >= 2*DSIZE) {
+            PUT(HDRP(ptr), PACK(asize, 1));
+            PUT(FTRP(ptr), PACK(asize, 1));
+            
+            void *freeptr = NEXT_BLKP(ptr);
+            PUT(HDRP(freeptr), PACK(remainder, 0));
+            PUT(FTRP(freeptr), PACK(remainder, 0));
+            coalesce(freeptr);
+        }
         return oldptr;
     }
 
-    size_t next_alloc = GET_ALLOC(HDRP(NEXT_BLKP(ptr)));
+    void *nextptr = NEXT_BLKP(ptr);
+
+    if (GET_SIZE(HDRP(nextptr)) == 0) {
+        size_t need = asize - csize;
+        size_t extendsize = MAX(need, CHUNKSIZE);
+
+        if (extend_heap(extendsize / WSIZE) != NULL) {
+            csize += GET_SIZE(HDRP(NEXT_BLKP(ptr)));
+
+            PUT(HDRP(ptr), PACK(csize, 0));
+            PUT(FTRP(ptr), PACK(csize, 0));
+
+            place(ptr, asize);
+            return ptr;
+        }
+    }
+
+    size_t next_alloc = GET_ALLOC(HDRP(nextptr));
     if (!next_alloc) {
-        csize += GET_SIZE(HDRP(NEXT_BLKP(ptr)));
+        csize += GET_SIZE(HDRP(nextptr));
         if (csize >= asize) {
             PUT(FTRP(NEXT_BLKP(ptr)), PACK(csize, 0));
             PUT(HDRP(ptr), PACK(csize, 0));
